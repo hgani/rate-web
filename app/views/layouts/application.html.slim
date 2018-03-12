@@ -1,0 +1,21 @@
+doctype html
+html
+  head
+    meta content="text/html; charset=UTF-8" http-equiv="Content-Type"
+    title Rating
+    = csrf_meta_tags
+    // disable turbolinks
+    /= stylesheet_link_tag 'application', media: 'all', 'data-turbolinks-track': 'reload'
+    /= javascript_include_tag 'application', 'data-turbolinks-track': 'reload'
+
+    link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"
+    link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css"
+    = stylesheet_link_tag 'application', media: 'all'
+    = stylesheet_pack_tag 'app'
+
+    = javascript_include_tag 'application'
+    script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"
+    = javascript_pack_tag 'app'
+  body
+    #vueRoot
+      <router-view></router-view>
