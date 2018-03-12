@@ -121,19 +121,3 @@ export default {
 };
 </script>
 
-<style lang='scss'>
-.stars {
-  &.stars-lg {
-    i {
-      margin-right: 5px;
-      font-size: 2rem !important;
-    }
-  }
-  i {
-    color: grey;
-    &.choosen {
-      color: orange;
-    }
-  }
-}
-</style>

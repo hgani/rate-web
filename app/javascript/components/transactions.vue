@@ -2,44 +2,47 @@
   div.container-fluid
     rate-modal(:web3-helper='web3Helper' :contract='contract' :transaction='tx', @cancel='modalCancel')
 
-    p <strong>{{isSender ? 'Sender' : 'Recipient'}}</strong>: {{transactionsOwner.toLowerCase()}}
+    p <strong>Profile</strong>: {{transactionsOwner.toLowerCase()}}
     div(v-if="!isSender")
-      div(v-show="avg.completed")
-        | Total rated transactions: <strong>{{avg.count}}</strong>
-        br
-        | Average rating (last 50 rated transactions): <strong>{{avg.result}}</strong>
+      div.stars(v-show="avg.completed")
+        //| Total rated transactions: <strong>{{avg.count}}</strong>
+        //br
+        //| Average rating (last 50 rated transactions): <strong>{{avg.result}}</strong>
+        //br
+        strong Average Rating: &nbsp;
+        i.fa.fa-star(v-for="i in [0, 1, 2, 3, 4]" :class="{choosen: avg.result > i}")
       div(v-show="!avg.completed")
-        | Loading average info...  
+        | Calculating...
 
     ul.nav.nav-tabs.justify-content-center
       li.nav-item
-        router-link.nav-link(:to="{path: 'transactions', query: {sender: isMe ? 'me' : transactionsOwner}}" :class="{active: isSender}") Sent
-      li.nav-item
         router-link.nav-link(:to="{path: 'transactions', query: {recipient: isMe ? 'me' : transactionsOwner}}" :class="{active: !isSender}") Received
+      li.nav-item
+        router-link.nav-link(:to="{path: 'transactions', query: {sender: isMe ? 'me' : transactionsOwner}}" :class="{active: isSender}") Sent
 
     .tab-content
       pagination(:pagination="pagination")
 
       sender(
         v-if='isSender'
-        :transactionsOwner='transactionsOwner' 
-        :transactions='transactions' 
+        :transactionsOwner='transactionsOwner'
+        :transactions='transactions'
         :enableRate='enableRate'
         @set-rating='setRating'
-      )  
+      )
 
       recipient(
         v-if='!isSender'
-        :transactionsOwner='transactionsOwner' 
-        :transactions='transactions' 
-      )           
+        :transactionsOwner='transactionsOwner'
+        :transactions='transactions'
+      )
 
       h4.text-center(v-show="waitingInitTable") Loading...
 
       div.text-center(v-show="!waitingInitTable && !transactions.length")
         | No Record Found
 
-      pagination(:pagination="pagination")  
+      pagination(:pagination="pagination")
 </template>
 
 <script>
@@ -110,8 +113,7 @@ export default {
 
       initTable();
 
-      // Set delay because EtherScan limit API call per second
-      setTimeout(avg, 500);
+      setTimeout(avg);
 
       function initTable() {
         self.waitingInitTable = true;
@@ -135,6 +137,7 @@ export default {
             self.waitingInitTable = false;
 
             let txs = [];
+            const transactions = [];
 
             if (data.result.length) {
               if (self.isSender) {
@@ -178,7 +181,7 @@ export default {
                   if (tx.rating.id) {
                     self.transactionsRated.push(tx);
                   }
-                  self.transactions.push(tx);
+                  transactions.push(tx);
 
                   return cb();
                 });
@@ -186,7 +189,7 @@ export default {
               err => {
                 if (err) throw err;
 
-                self.transactions = _.orderBy(self.transactions, "timeStamp", [
+                self.transactions = _.orderBy(transactions, "timeStamp", [
                   "desc"
                 ]);
                 self.transactionsRated = _.orderBy(
@@ -301,7 +304,7 @@ export default {
               } else {
                 page++;
                 // Set delay because EtherScan limit API call per second
-                setTimeout(getTxList, 500);
+                setTimeout(getTxList, 300);
               }
             },
             error(err) {

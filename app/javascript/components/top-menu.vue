@@ -7,8 +7,8 @@
       #navbarSupportedContent.collapse.navbar-collapse
         ul.navbar-nav.ml-auto.mr-1
           li.nav-item(v-if="web3.eth.defaultAccount")
-            router-link.nav-link(:to="{path: 'transactions', query: {sender: 'me'}}") Me     
-          li.nav-item    
+            router-link.nav-link(:to="{path: 'transactions', query: {recipient: 'me'}}") Me     
+          li.nav-item
             .form-inline
               input#searchQuery.form-control.mr-sm-2(type="search" v-model="searchQuery" placeholder="Enter an ETH address to view its rating")
               button#searchButton.btn.my-2.my-sm-0(@click="search" Search) Go
@@ -44,4 +44,3 @@ export default {
   width: 303px;
 }
 </style>
-

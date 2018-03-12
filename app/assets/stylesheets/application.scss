@@ -15,3 +15,17 @@
  */
 
 @import "bootstrap";
+.stars {
+  &.stars-lg {
+    i {
+      margin-right: 5px;
+      font-size: 2rem !important;
+    }
+  }
+  i {
+    color: lightGray;
+    &.choosen {
+      color: orange;
+    }
+  }
+}
