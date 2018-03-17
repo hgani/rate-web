@@ -1,12 +1,61 @@
-import Web3 from 'web3'
-import EthTx from 'ethereumjs-tx'
+const web3 = global.web3;
+let isCheckInstall = false;
+let isCheckLogin = false;
+let cbs = {
+  checkInstall: [],
+  checkLogin: []
+}
 
 export default {
   getTxParams,
   viewAddressPath: 'https://rinkeby.etherscan.io/address',
   viewTxPath: 'https://rinkeby.etherscan.io/tx',
+  onCheckInstall,
+  onCheckLogin,
+  checkMetamask,
   metamaskInstalled,
   metamaskLogin
+}
+
+function onCheckInstall(cb) {
+  if (isCheckInstall) {
+    return cb();
+  }
+  cbs.checkInstall.push(cb);
+}
+
+function onCheckLogin(cb) {
+  if (isCheckLogin) {
+    return cb();
+  }
+  cbs.checkLogin.push(cb);
+}
+
+function checkMetamask(retry) {
+  setTimeout(checkInstall, 0, retry);
+  setTimeout(checkLogin, 0, retry);
+
+  function checkInstall(retry) {
+    retry--
+
+    if (retry && !metamaskInstalled()) {
+      return setTimeout(checkInstall, 500, retry);
+    }
+    checkInstall = true;
+    cbs.checkInstall.forEach(cb => setTimeout(cb));
+    cbs.checkInstall = [];
+  }
+
+  function checkLogin(retry) {
+    retry--
+
+    if (retry && !metamaskLogin()) {
+      return setTimeout(checkLogin, 500, retry);
+    }
+    checkLogin = true;
+    cbs.checkLogin.forEach(cb => setTimeout(cb));
+    cbs.checkLogin = [];
+  }
 }
 
 function metamaskInstalled() {

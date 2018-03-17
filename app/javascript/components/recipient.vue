@@ -14,8 +14,7 @@
 
                   .mt-2
                     div(v-if="tx.rating.stars")
-                      .stars
-                        i.fa.fa-star(v-for="i in [0, 1, 2, 3, 4]" :class="{choosen: tx.rating.stars > i}")
+                      star-rating(:increment="0.5" :rating="tx.rating.stars" :star-size="20" :show-rating="false" :inline="true" :read-only="true")
                       | {{tx.rating.review}}
                     div(v-else)
                       | No rating yet

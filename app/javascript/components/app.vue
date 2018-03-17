@@ -23,12 +23,17 @@ export default {
   created: function() {
     const self = this;
 
-    if (!self.web3Helper.metamaskInstalled()) {
-      alert("Please install MetaMask");
-    }
-    if (!self.web3Helper.metamaskLogin()) {
-      alert("Please login to MetaMask");
-    }
+    self.web3Helper.onCheckInstall(() => {
+      if (!self.web3Helper.metamaskInstalled()) {
+        alert("Please install MetaMask");
+      }
+    });
+
+    self.web3Helper.onCheckLogin(() => {
+      if (!self.web3Helper.metamaskLogin()) {
+        alert("Please login to MetaMask");
+      }
+    });
 
     updateNetwork();
     setInterval(updateNetwork, 1000);

@@ -10,7 +10,7 @@
         //| Average rating (last 50 rated transactions): <strong>{{avg.result}}</strong>
         //br
         strong Average Rating: &nbsp;
-        i.fa.fa-star(v-for="i in [0, 1, 2, 3, 4]" :class="{choosen: avg.result > i}")
+        star-rating(:increment="0.5" :rating="avg.result" :star-size="20" :show-rating="false" :inline="true" :read-only="true")
       div(v-show="!avg.completed")
         | Calculating...
 
@@ -20,8 +20,8 @@
       li.nav-item
         router-link.nav-link(:to="{path: 'transactions', query: {sender: isMe ? 'me' : transactionsOwner}}" :class="{active: isSender}") Sent
 
-    .tab-content
-      pagination(:pagination="pagination")
+    .tab-content.py-3
+      pagination(:pagination="pagination")  
 
       sender(
         v-if='isSender'
@@ -39,10 +39,12 @@
 
       h4.text-center(v-show="waitingInitTable") Loading...
 
-      div.text-center(v-show="!waitingInitTable && !transactions.length")
+      div.text-center(v-show="!waitingInitTable && !isMore")
         | No Record Found
 
-      pagination(:pagination="pagination")
+      .row
+        .col-md-6.offset-md-3.text-center.my-3
+          button.btn.btn-primary.btn-block.btn-lg(v-show="isMore && !waitingInitTable" @click="more()") More
 </template>
 
 <script>
@@ -53,7 +55,9 @@ function initData(data) {
   data.isSender = false;
   data.transactionsOwner = null;
   data.transactions = [];
-  data.transactionsRated = [];
+  data.transactionsCache = [];
+  data.page = 1;
+  data.isMore = true;
   data.tx = { rating: {} };
   data.result = null;
   data.value = 0;
@@ -71,14 +75,16 @@ export default {
   created() {
     const self = this;
 
-    self.init(self);
+    self.more();
+    self.calculateAvg();
   },
   watch: {
     $route(to, from) {
       const self = this;
 
       initData(self);
-      self.init(self);
+      self.more();
+      self.calculateAvg();
     }
   },
   computed: {
@@ -92,7 +98,129 @@ export default {
     }
   },
   methods: {
-    init(self) {
+    getRating(tx, cb) {
+      const self = this;
+
+      self.contract.getRating.call(tx.from, tx.hash, (err, data) => {
+        if (err) return cb(err);
+
+        return cb(null, { tx, rating: data });
+      });
+    },
+    calculateAvg() {
+      const self = this;
+
+      let txs = [];
+      let finished = false;
+      let page = 1;
+      let maxTxs = 50;
+
+      getTxList();
+
+      function getTxList() {
+        $.ajax({
+          url: "https://rinkeby.etherscan.io/api",
+          data: {
+            apikey: self.etherscanAPIKey,
+            module: "account",
+            action: "txlist",
+            address: self.transactionsOwner,
+            startblock: 0,
+            endblock: 99999999,
+            sort: "desc",
+            page: page,
+            offset: 500
+          },
+          success(data) {
+            let tempTxs = [];
+
+            if (data.result.length) {
+              tempTxs = _.filter(
+                data.result,
+                item =>
+                  item.to.toLowerCase() === self.transactionsOwner.toLowerCase()
+              );
+              txs = txs.concat(tempTxs);
+
+              if (txs.length >= maxTxs) {
+                finished = true;
+              }
+            } else {
+              finished = true;
+            }
+
+            if (finished) {
+              async.eachLimit(
+                txs,
+                10,
+                (tx, cb) => {
+                  self.getRating(tx, (err, data) => {
+                    if (err) throw err;
+
+                    const id = parseInt(data.rating[0]);
+                    const stars = parseInt(data.rating[1]) / 2;
+
+                    if (id) {
+                      self.avg.count += 1;
+                      self.avg.sum += stars;
+                    }
+
+                    return cb();
+                  });
+                },
+                err => {
+                  if (err) throw err;
+
+                  if (self.avg.count) {
+                    self.avg.result = self.avg.sum / self.avg.count;
+                  }
+
+                  self.avg.completed = true;
+                }
+              );
+            } else {
+              page++;
+              // Set delay because EtherScan limit API call per second
+              setTimeout(getTxList, 300);
+            }
+          },
+          error(err) {
+            if (err) throw err;
+          }
+        });
+      }
+    },
+    setPagination(page, currentTxsCount) {
+      const self = this;
+
+      const route = self.$router.currentRoute;
+
+      let pagination = {
+        path: "transactions",
+        page,
+        hasPrev: page > 1,
+        hasNext: currentTxsCount,
+        prev: {
+          page: page - 1
+        },
+        next: {
+          page: page + 1
+        }
+      };
+
+      if (self.isSender) {
+        pagination.prev.sender = route.query.sender;
+        pagination.next.sender = route.query.sender;
+      } else {
+        pagination.prev.recipient = route.query.recipient;
+        pagination.next.recipient = route.query.recipient;
+      }
+
+      self.pagination = pagination;
+    },
+    more() {
+      const self = this;
+
       const route = self.$router.currentRoute;
 
       self.isSender = !!route.query.sender;
@@ -111,14 +239,10 @@ export default {
         .contract(contractABI)
         .at(self.ratingContract.address);
 
-      initTable();
+      initTable(self.page++);
 
-      setTimeout(avg);
-
-      function initTable() {
+      function initTable(page) {
         self.waitingInitTable = true;
-
-        const page = +(route.query.page || 1);
 
         $.ajax({
           url: "https://rinkeby.etherscan.io/api",
@@ -130,14 +254,11 @@ export default {
             startblock: 0,
             endblock: 99999999,
             sort: "desc",
-            page: page,
+            page,
             offset: 50
           },
           success(data) {
-            self.waitingInitTable = false;
-
             let txs = [];
-            const transactions = [];
 
             if (data.result.length) {
               if (self.isSender) {
@@ -164,24 +285,25 @@ export default {
                 tx.rating = { id: null, stars: null, review: null };
               }
 
-              setPagination(txs.length);
+              if (!txs.length) {
+                setTimeout(self.more, 500);
+              }
+            } else {
+              self.isMore = false;
             }
 
             async.eachLimit(
               txs,
               10,
               (tx, cb) => {
-                getRating(tx, (err, data) => {
+                self.getRating(tx, (err, data) => {
                   if (err) throw err;
 
                   tx.rating.id = parseInt(data.rating[0]);
-                  tx.rating.stars = parseInt(data.rating[1]);
+                  tx.rating.stars = parseInt(data.rating[1]) / 2;
                   tx.rating.review = data.rating[2];
 
-                  if (tx.rating.id) {
-                    self.transactionsRated.push(tx);
-                  }
-                  transactions.push(tx);
+                  self.transactionsCache.push(tx);
 
                   return cb();
                 });
@@ -189,136 +311,19 @@ export default {
               err => {
                 if (err) throw err;
 
-                self.transactions = _.orderBy(transactions, "timeStamp", [
-                  "desc"
-                ]);
-                self.transactionsRated = _.orderBy(
-                  self.transactionsRated,
+                self.waitingInitTable = false;
+
+                self.transactions = _.orderBy(
+                  self.transactionsCache,
                   "timeStamp",
                   ["desc"]
                 );
               }
             );
-
-            function setPagination(currentTxsCount) {
-              let pagination = {
-                path: "transactions",
-                page,
-                hasPrev: page > 1,
-                hasNext: currentTxsCount,
-                prev: {
-                  page: page - 1
-                },
-                next: {
-                  page: page + 1
-                }
-              };
-
-              if (self.isSender) {
-                pagination.prev.sender = route.query.sender;
-                pagination.next.sender = route.query.sender;
-              } else {
-                pagination.prev.recipient = route.query.recipient;
-                pagination.next.recipient = route.query.recipient;
-              }
-
-              self.pagination = pagination;
-            }
           },
           error(err) {
             if (err) throw err;
           }
-        });
-      }
-
-      function avg() {
-        let txs = [];
-        let finished = false;
-        let page = 1;
-        let maxTxs = 50;
-
-        getTxList();
-
-        function getTxList() {
-          $.ajax({
-            url: "https://rinkeby.etherscan.io/api",
-            data: {
-              apikey: self.etherscanAPIKey,
-              module: "account",
-              action: "txlist",
-              address: self.transactionsOwner,
-              startblock: 0,
-              endblock: 99999999,
-              sort: "desc",
-              page: page,
-              offset: 500
-            },
-            success(data) {
-              let tempTxs = [];
-
-              if (data.result.length) {
-                tempTxs = _.filter(
-                  data.result,
-                  item =>
-                    item.to.toLowerCase() ===
-                    self.transactionsOwner.toLowerCase()
-                );
-                txs = txs.concat(tempTxs);
-
-                if (txs.length >= maxTxs) {
-                  finished = true;
-                }
-              } else {
-                finished = true;
-              }
-
-              if (finished) {
-                async.eachLimit(
-                  txs,
-                  10,
-                  (tx, cb) => {
-                    getRating(tx, (err, data) => {
-                      if (err) throw err;
-
-                      const id = parseInt(data.rating[0]);
-                      const stars = parseInt(data.rating[1]);
-
-                      if (id) {
-                        self.avg.count += 1;
-                        self.avg.sum += stars;
-                      }
-
-                      return cb();
-                    });
-                  },
-                  err => {
-                    if (err) throw err;
-
-                    if (self.avg.count) {
-                      self.avg.result = self.avg.sum / self.avg.count;
-                    }
-
-                    self.avg.completed = true;
-                  }
-                );
-              } else {
-                page++;
-                // Set delay because EtherScan limit API call per second
-                setTimeout(getTxList, 300);
-              }
-            },
-            error(err) {
-              if (err) throw err;
-            }
-          });
-        }
-      }
-
-      function getRating(tx, cb) {
-        self.contract.getRating.call(tx.from, tx.hash, (err, data) => {
-          if (err) return cb(err);
-
-          return cb(null, { tx, rating: data });
         });
       }
     },

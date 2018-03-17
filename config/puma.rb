@@ -70,6 +70,6 @@ on_worker_boot do
   #  end
 
   # See https://coderwall.com/p/fprnhg
-  @sidekiq_pid ||= spawn('bundle exec sidekiq -C ./config/sidekiq.yml')
+  # @sidekiq_pid ||= spawn('bundle exec sidekiq -C ./config/sidekiq.yml')
 end
 

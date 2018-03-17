@@ -12,12 +12,7 @@
             a(style="font-size: 0.8rem" :href="'https://rinkeby.etherscan.io/tx/' + tx.hash") {{tx.hash}}
           .form-group
             label Stars
-            div.stars.stars-lg
-              i.fa.fa-star(@click="choose(1)" :class="{choosen: tx.rating.stars > 0}")
-              i.fa.fa-star(@click="choose(2)" :class="{choosen: tx.rating.stars > 1}")
-              i.fa.fa-star(@click="choose(3)" :class="{choosen: tx.rating.stars > 2}")
-              i.fa.fa-star(@click="choose(4)" :class="{choosen: tx.rating.stars > 3}")
-              i.fa.fa-star(@click="choose(5)" :class="{choosen: tx.rating.stars > 4}")
+            star-rating(@rating-selected="choose" :increment="0.5" :rating="tx.rating.stars" :star-size="30" :show-rating="false")
           .form-group
             label Review (max 5000 chars)
             textarea.form-control(v-model="tx.rating.review")
@@ -51,9 +46,11 @@ export default {
     choose(newStars) {
       const self = this;
 
-      let stars = self.tx.rating.stars;
-      stars = newStars === stars ? --newStars : newStars;
-      self.tx.rating.stars = stars;
+      self.tx.rating.stars = newStars;
+
+      // let stars = self.tx.rating.stars;
+      // stars = newStars === stars ? --newStars : newStars;
+      // self.tx.rating.stars = stars;
     },
     submit() {
       const self = this;
@@ -68,16 +65,16 @@ export default {
 
       const address = web3.eth.defaultAccount;
       const hash = self.tx.hash;
-      const stars = self.tx.rating.stars;
-      const review = self.tx.rating.review;
+      const stars = self.tx.rating.stars * 2;
+      const review = self.tx.rating.review.trim();
 
       if (!self.web3Helper.metamaskLogin()) {
         return alert("Please login to MetaMask");
-      } else if (!(self.tx.rating.stars >= 1 && self.tx.rating.stars <= 5)) {
+      } else if (!(stars >= 1 && stars <= 10)) {
         return ttr.error("Please give valid stars");
-      } else if (self.tx.rating.review.length < 3) {
+      } else if (review.length < 3) {
         return ttr.error("Review minimal 3 characters");
-      } else if (self.tx.rating.review.length > 5000) {
+      } else if (review.length > 5000) {
         return ttr.error("Review maximal 5000 characters");
       }
 

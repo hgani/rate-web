@@ -5,6 +5,8 @@ import utils from '../utils';
 import web3Helper from '../web3-helper';
 import ratingContract from '../rating-contract';
 
+import StarRating from 'vue-star-rating'
+
 import NoMetaMask from '../components/no-metamask';
 import TopMenu from '../components/top-menu';
 import SideMenu from '../components/side-menu';
@@ -19,6 +21,8 @@ const web3 = global.web3;
 const etherscanAPIKey = '8XY5G7CC8CYMAJ267UBE58QNWDG1H49JHT';
 
 $(() => {
+  web3Helper.checkMetamask(4);
+
   toastr.options.positionClass = 'toast-top-center';
   window.ttr = toastr;
   const csrfToken = $("meta[name=csrf-token]").attr("content");
@@ -26,6 +30,7 @@ $(() => {
   Vue.use(VueRouter);
 
   // register components
+  Vue.component('star-rating', StarRating);
   Vue.component('top-menu', TopMenu);
   Vue.component('side-menu', SideMenu);
   Vue.component('pagination', Pagination);
