@@ -14,11 +14,11 @@ contract RatingList {
         bytes32 key = keccak256(txHash);
         Rating storage rating = ratings[msg.sender][key];
         
-        require(stars >= 1 && stars <= 5);
+        require(stars >= 1 && stars <= 10);
         require(bytes(review).length <= 5000);
         
         rating.id = ++ratingIdCounter;
-        rating.stars = min(stars, 5);
+        rating.stars = min(stars, 10);
         rating.review = review;
     }
     
