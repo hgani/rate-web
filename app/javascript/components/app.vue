@@ -35,32 +35,13 @@ export default {
       }
     });
 
-    updateNetwork();
-    setInterval(updateNetwork, 1000);
-
-    function updateNetwork() {
-      web3.version.getNetwork((err, netId) => {
-        switch (netId) {
-          case "1":
-            self.node.network = "Mainnet";
-            break;
-          case "2":
-            self.node.network = "Morden";
-            break;
-          case "3":
-            self.node.network = "Ropsten";
-            break;
-          case "4":
-            self.node.network = "Rinkeby";
-            break;
-          case "42":
-            self.node.network = "Kovan";
-            break;
-          default:
-            self.node.network = "Unknown";
-        }
-      });
-    }
+    setInterval(
+      () =>
+        self.web3Helper.getNetwork((err, net) => {
+          self.node.network = net;
+        }),
+      1000
+    );
   }
 };
 </script>

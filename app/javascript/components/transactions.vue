@@ -4,37 +4,34 @@
 
     p <strong>Profile</strong>: {{transactionsOwner.toLowerCase()}}
     div(v-if="!isSender")
-      div.stars(v-show="avg.completed")
+      p
+        strong Link: &nbsp;
+        a(:href="ownerUrl") {{ ownerUrl }}
+        br
+        span.small (Send the above link to your senders and get them to rate you)
+
+      div.stars
         //| Total rated transactions: <strong>{{avg.count}}</strong>
         //br
         //| Average rating (last 50 rated transactions): <strong>{{avg.result}}</strong>
         //br
         strong Average Rating: &nbsp;
-        star-rating(:increment="0.5" :rating="avg.result" :star-size="20" :show-rating="false" :inline="true" :read-only="true")
-      div(v-show="!avg.completed")
-        | Calculating...
+        span(v-if="avg.completed")
+          star-rating(:increment="0.5" :rating="avg.result" :star-size="20" :show-rating="false" :inline="true" :read-only="true")
+        span.text-muted(v-else)
+          | calculating...
 
-    ul.nav.nav-tabs.justify-content-center
+    ul.nav.nav-tabs.justify-content-center.mt-4
       li.nav-item
-        router-link.nav-link(:to="{path: 'transactions', query: {recipient: isMe ? 'me' : transactionsOwner}}" :class="{active: !isSender}") Received
+        router-link.nav-link(:to="{path: '/transactions', query: {recipient: isMe ? 'me' : transactionsOwner}}" :class="{active: !isSender}") Received
       li.nav-item
-        router-link.nav-link(:to="{path: 'transactions', query: {sender: isMe ? 'me' : transactionsOwner}}" :class="{active: isSender}") Sent
+        router-link.nav-link(:to="{path: '/transactions', query: {sender: isMe ? 'me' : transactionsOwner}}" :class="{active: isSender}") Sent
 
     .tab-content.py-3
-      pagination(:pagination="pagination")  
-
-      sender(
-        v-if='isSender'
-        :transactionsOwner='transactionsOwner'
+      transaction(
         :transactions='transactions'
-        :enableRate='enableRate'
+        :headerComponent='headerComponent'
         @set-rating='setRating'
-      )
-
-      recipient(
-        v-if='!isSender'
-        :transactionsOwner='transactionsOwner'
-        :transactions='transactions'
       )
 
       h4.text-center(v-show="waitingInitTable") Loading...
@@ -51,6 +48,8 @@
 import async from "async";
 
 function initData(data) {
+  data.baseUrl = `https://${window.location.hostname}/#`;
+  data.isProfiles = false;
   data.isMe = false;
   data.isSender = false;
   data.transactionsOwner = null;
@@ -75,6 +74,7 @@ export default {
   created() {
     const self = this;
 
+    self.checkIsProfiles();
     self.more();
     self.calculateAvg();
   },
@@ -83,18 +83,19 @@ export default {
       const self = this;
 
       initData(self);
+      self.checkIsProfiles();
       self.more();
       self.calculateAvg();
     }
   },
   computed: {
-    enableRate() {
+    headerComponent() {
       const self = this;
-      return (
-        self.web3.eth.defaultAccount &&
-        self.transactionsOwner.toLowerCase() ===
-          self.web3.eth.defaultAccount.toLowerCase()
-      );
+      return self.isSender ? "sender-header" : "recipient-header";
+    },
+    ownerUrl() {
+      const self = this;
+      return `${self.baseUrl}/profiles/${self.transactionsOwner.toLowerCase()}`;
     }
   },
   methods: {
@@ -190,44 +191,29 @@ export default {
         });
       }
     },
-    setPagination(page, currentTxsCount) {
+    checkIsProfiles() {
       const self = this;
 
       const route = self.$router.currentRoute;
 
-      let pagination = {
-        path: "transactions",
-        page,
-        hasPrev: page > 1,
-        hasNext: currentTxsCount,
-        prev: {
-          page: page - 1
-        },
-        next: {
-          page: page + 1
-        }
-      };
-
-      if (self.isSender) {
-        pagination.prev.sender = route.query.sender;
-        pagination.next.sender = route.query.sender;
-      } else {
-        pagination.prev.recipient = route.query.recipient;
-        pagination.next.recipient = route.query.recipient;
+      if (/^\/profiles/.exec(route.path)) {
+        self.isProfiles = true;
       }
-
-      self.pagination = pagination;
     },
     more() {
       const self = this;
 
       const route = self.$router.currentRoute;
 
-      self.isSender = !!route.query.sender;
-
-      self.transactionsOwner = self.isSender
-        ? route.query.sender
-        : route.query.recipient;
+      if (self.isProfiles) {
+        self.isSender = false;
+        self.transactionsOwner = route.params.address;
+      } else {
+        self.isSender = !!route.query.sender;
+        self.transactionsOwner = self.isSender
+          ? route.query.sender
+          : route.query.recipient;
+      }
 
       if (self.transactionsOwner === "me") {
         self.isMe = true;

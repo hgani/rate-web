@@ -2,7 +2,7 @@ import _ from 'lodash';
 import Vue from 'vue/dist/vue.esm';
 import VueRouter from 'vue-router';
 import utils from '../utils';
-import web3Helper from '../web3-helper';
+import web3Helper from 'web3-helper';
 import ratingContract from '../rating-contract';
 
 import StarRating from 'vue-star-rating'
@@ -14,8 +14,9 @@ import Pagination from '../components/pagination';
 import App from '../components/app';
 import Transactions from '../components/transactions';
 import RateModal from '../components/rate-modal';
-import Sender from '../components/sender';
-import Recipient from '../components/recipient';
+import Transaction from '../components/transaction';
+import SenderHeader from '../components/sender-header';
+import RecipientHeader from '../components/recipient-header';
 
 const web3 = global.web3;
 const etherscanAPIKey = '8XY5G7CC8CYMAJ267UBE58QNWDG1H49JHT';
@@ -35,8 +36,9 @@ $(() => {
   Vue.component('side-menu', SideMenu);
   Vue.component('pagination', Pagination);
   Vue.component('rate-modal', RateModal);
-  Vue.component('sender', Sender);
-  Vue.component('recipient', Recipient);
+  Vue.component('transaction', Transaction);
+  Vue.component('sender-header', SenderHeader);
+  Vue.component('recipient-header', RecipientHeader);
 
   global.vm = new Vue({
     el: '#vueRoot',
@@ -56,6 +58,16 @@ $(() => {
           },
           {
             path: 'transactions',
+            component: Transactions,
+            props: {
+              web3,
+              web3Helper,
+              ratingContract,
+              etherscanAPIKey
+            }
+          },
+          {
+            path: 'profiles/:address',
             component: Transactions,
             props: {
               web3,

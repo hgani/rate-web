@@ -7,17 +7,17 @@
             td
               .row
                 .col-md-8
-                  b
-                    = 'To: '
-                    router-link(:to="{path: 'transactions', query: {recipient: tx.to}}")
-                      | {{tx.to && tx.to.toLowerCase()}}
+                  <component :is="headerComponent" :tx="tx" />
 
                   .mt-2
                     div(v-if="tx.rating.stars")
                       star-rating(:increment="0.5" :rating="tx.rating.stars" :star-size="20" :show-rating="false" :inline="true" :read-only="true")
                       | {{tx.rating.review}}
                     div(v-else)
-                      button.btn.btn-success.btn-sm(v-if="enableRate && !tx.rating.id" @click="setRating(tx.hash)") rate&raquo;
+                      span(v-if="enableRate(tx)")
+                        button.btn.btn-success.btn-sm(v-if="enableRate && !tx.rating.id" @click="setRating(tx.hash)") rate&raquo;
+                      span(v-else)
+                        | No rating yet
                 .col-md-4
                   .text-right
                     div= '{{tx.value / 1e18}} ETH'
@@ -30,15 +30,16 @@
 </template>
 
 <script>
-import async from "async";
-
 export default {
-  props: ["transactions-owner", "transactions", "enableRate"],
+  props: ["transactions", "headerComponent"],
   methods: {
     setRating(hash) {
       const self = this;
-
       self.$emit("set-rating", hash);
+    },
+    enableRate(tx) {
+      const self = this;
+      return tx.from.toLowerCase() === web3.eth.defaultAccount;
     }
   }
 };
